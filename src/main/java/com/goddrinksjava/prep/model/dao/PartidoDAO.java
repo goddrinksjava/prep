@@ -17,7 +17,7 @@ public class PartidoDAO {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "select NOMBRE from PARTIDO where ID = ?"
+                        "select nombre from partido where id = ?"
                 )
         ) {
             stmt.setInt(1, id);

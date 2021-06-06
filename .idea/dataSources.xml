@@ -1,15 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
-    <data-source source="LOCAL" name="prep" uuid="f127f613-5553-481e-82f4-5031ac4f9f71">
-      <driver-ref>h2.unified</driver-ref>
-      <synchronize>true</synchronize>
-      <configured-by-url>true</configured-by-url>
-      <jdbc-driver>org.h2.Driver</jdbc-driver>
-      <jdbc-url>jdbc:h2:file:~\IdeaProjects\prep\src\main\resources\H2\prep;AUTO_SERVER=TRUE</jdbc-url>
-      <working-dir>$ProjectFileDir$</working-dir>
-    </data-source>
-    <data-source source="LOCAL" name="prep@localhost" uuid="3702e790-aa88-4e69-841c-49b005429229">
+    <data-source source="LOCAL" name="prep@localhost" uuid="12e70bd5-065d-43c6-ab89-7a9209b384ce">
       <driver-ref>mysql.8</driver-ref>
       <synchronize>true</synchronize>
       <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>

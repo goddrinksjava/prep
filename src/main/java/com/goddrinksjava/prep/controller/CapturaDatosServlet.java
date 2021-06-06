@@ -1,10 +1,13 @@
 package com.goddrinksjava.prep.controller;
 
+import com.goddrinksjava.prep.model.bean.database.Candidato;
+import com.goddrinksjava.prep.model.bean.database.Usuario;
+import com.goddrinksjava.prep.model.bean.database.Votos;
+import com.goddrinksjava.prep.model.bean.dto.CapturaDTO;
 import com.goddrinksjava.prep.model.dao.CandidatoDAO;
+import com.goddrinksjava.prep.model.dao.CargoDAO;
+import com.goddrinksjava.prep.model.dao.UsuarioDAO;
 import com.goddrinksjava.prep.model.dao.VotosDAO;
-import com.goddrinksjava.prep.model.pojo.database.Candidato;
-import com.goddrinksjava.prep.model.pojo.database.Votos;
-import com.goddrinksjava.prep.model.pojo.dto.CapturaDTO;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
@@ -21,8 +24,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.goddrinksjava.prep.util.Validator.allEqual;
-
 
 @ServletSecurity(
         value = @HttpConstraint(rolesAllowed = {"capturista", "administrador"})
@@ -34,6 +35,12 @@ public class CapturaDatosServlet extends HttpServlet {
 
     @Inject
     CandidatoDAO candidatoDAO;
+
+    @Inject
+    CargoDAO cargoDAO;
+
+    @Inject
+    UsuarioDAO usuarioDAO;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -49,17 +56,34 @@ public class CapturaDatosServlet extends HttpServlet {
 
         String cargo;
         try {
-            cargo = candidatoDAO.getCargoById(cargoId);
+            cargo = cargoDAO.getNombreById(cargoId);
         } catch (SQLException throwables) {
             throwables.printStackTrace();
             response.sendError(404);
             return;
         }
 
+        System.out.println("Cargo: " + cargo);
+
+        String email = request.getUserPrincipal().getName();
+
+        Usuario usuario;
+        try {
+            usuario = usuarioDAO.findByEmail(email);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            throw new ServletException();
+        }
+
+        if (usuario.getFkCasilla() == null) {
+            response.sendRedirect("/SeleccionCasilla");
+            return;
+        }
+
         List<CapturaDTO> candidatos = new ArrayList<>();
 
         try {
-            List<Votos> votosList = votosDAO.getByCasilla(1);
+            List<Votos> votosList = votosDAO.getByCasilla(usuario.getFkCasilla());
             List<Candidato> candidatoList = candidatoDAO.getByCargo(cargoId);
 
             for (Votos votos : votosList) {
@@ -80,7 +104,6 @@ public class CapturaDatosServlet extends HttpServlet {
                 candidatos.add(
                         CapturaDTO.builder()
                                 .id(candidato.getId())
-                                .nombre(candidato.getNombre())
                                 .partido(partido)
                                 .votos(votos.getCantidad())
                                 .build()
@@ -88,6 +111,7 @@ public class CapturaDatosServlet extends HttpServlet {
             }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
+            System.out.println(throwables.getMessage());
             throw new ServletException();
         }
 
@@ -112,11 +136,6 @@ public class CapturaDatosServlet extends HttpServlet {
             numeroVotosStringValue = new String[0];
         }
 
-        if (!allEqual(idsStringValue.length, numeroVotosStringValue.length)) {
-            response.sendError(400);
-            return;
-        }
-
         List<Integer> ids;
         List<Integer> numeroVotos;
 
@@ -129,6 +148,20 @@ public class CapturaDatosServlet extends HttpServlet {
             return;
         }
 
+        String email = request.getUserPrincipal().getName();
+
+        Usuario usuario;
+        try {
+            usuario = usuarioDAO.findByEmail(email);
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            throw new ServletException();
+        }
+
+        if (usuario.getFkCasilla() == null) {
+            response.sendRedirect("/SeleccionCasilla");
+        }
+
         List<Votos> votosList = new ArrayList<>();
         int n = idsStringValue.length;
         for (int i = 0; i < n; i++) {
@@ -136,7 +169,7 @@ public class CapturaDatosServlet extends HttpServlet {
                     Votos.builder()
                             .cantidad(numeroVotos.get(i))
                             .fkCandidato(ids.get(i))
-                            .fkCasilla(1) //TODO
+                            .fkCasilla(usuario.getFkCasilla())
                             .build()
             );
         }

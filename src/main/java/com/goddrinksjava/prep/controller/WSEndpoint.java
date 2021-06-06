@@ -1,6 +1,7 @@
 package com.goddrinksjava.prep.controller;
 
-import com.goddrinksjava.prep.model.pojo.dto.PrepDTO;
+import com.goddrinksjava.prep.Encoder.WS.WSPrepDTOEncoder;
+import com.goddrinksjava.prep.model.bean.dto.WS.WSPrepDTO;
 
 import javax.enterprise.event.Observes;
 import javax.websocket.OnClose;
@@ -13,16 +14,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @ServerEndpoint(
         value = "/ws-prep",
-        encoders = {PrepDTOEncoder.class}
+        encoders = {WSPrepDTOEncoder.class}
 )
 public class WSEndpoint {
     private static final Set<Session> sessions = ConcurrentHashMap.newKeySet();
 
-    private static PrepDTO cache;
+    private static WSPrepDTO cache;
 
-    public static void setCache(PrepDTO prepDTO) {
-        System.out.println("Cache initialized: " + prepDTO);
-        WSEndpoint.cache = prepDTO;
+    public static void setCache(WSPrepDTO WSPrepDTO) {
+        System.out.println("Cache initialized: " + WSPrepDTO);
+        WSEndpoint.cache = WSPrepDTO;
     }
 
     @OnOpen
@@ -40,7 +41,7 @@ public class WSEndpoint {
         System.out.println("Session was removed");
     }
 
-    public void sendMessage(Session session, PrepDTO distritos) {
+    public void sendMessage(Session session, WSPrepDTO distritos) {
         try {
             session.getBasicRemote().sendObject(distritos);
         } catch (Exception e) {
@@ -48,7 +49,7 @@ public class WSEndpoint {
         }
     }
 
-    public void broadcast(@Observes PrepDTO event) {
+    public void broadcast(@Observes WSPrepDTO event) {
         System.out.println("DistritoEvent received");
 
         cache = event;

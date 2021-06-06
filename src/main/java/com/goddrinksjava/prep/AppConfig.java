@@ -10,11 +10,10 @@ import java.io.InputStream;
 import java.util.Properties;
 
 @DataSourceDefinition(name = "java:global/jdbc/prep",
-        className = "org.h2.jdbcx.JdbcDataSource",
-        url = "jdbc:h2:file:~/IdeaProjects/prep/src/main/resources/H2/prep;AUTO_SERVER=TRUE",
-        user = "sa",
-        password = "ShootYourGooMyDude",
-        properties = {"dynamic-reconfiguration-wait-timeout-in-seconds=15"}
+        className = "com.mysql.cj.jdbc.MysqlDataSource",
+        url = "jdbc:mysql://localhost:3306/prep",
+        user = "root",
+        properties = {"autoReconnect=true", "useSSL=false"}
 )
 
 @CustomFormAuthenticationMechanismDefinition(
@@ -38,7 +37,7 @@ public class AppConfig {
                         if (inputStream != null) {
                                 prop.load(inputStream);
                         } else {
-                                throw new FileNotFoundException("property file '" + propFileName + "' not found in the classpath");
+                                throw new FileNotFoundException();
                         }
                         result = prop.getProperty(key);
                 }

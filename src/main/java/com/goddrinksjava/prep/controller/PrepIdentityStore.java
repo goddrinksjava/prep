@@ -1,8 +1,7 @@
 package com.goddrinksjava.prep.controller;
 
 import com.goddrinksjava.prep.model.dao.UsuarioDAO;
-import com.goddrinksjava.prep.model.pojo.database.Privilegio;
-import com.goddrinksjava.prep.model.pojo.database.Usuario;
+import com.goddrinksjava.prep.model.bean.database.Usuario;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -10,8 +9,8 @@ import javax.security.enterprise.credential.UsernamePasswordCredential;
 import javax.security.enterprise.identitystore.CredentialValidationResult;
 import javax.security.enterprise.identitystore.IdentityStore;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static javax.security.enterprise.identitystore.CredentialValidationResult.INVALID_RESULT;
 
@@ -28,12 +27,9 @@ public class PrepIdentityStore implements IdentityStore {
 
             if (
                     usuario != null &&
-                            usuario.getPassword().equals(credential.getPasswordAsString()) &&
-                            usuario.getEnabled()
+                            usuario.getPassword().equals(credential.getPasswordAsString())
             ) {
-                Set<String> groups = usuarioDAO
-                        .getPrivileges(usuario.getId())
-                        .stream().map(Privilegio::getNombre).collect(Collectors.toSet());
+                Set<String> groups = new HashSet<>(usuarioDAO.getPrivileges(usuario.getId()));
 
                 return new CredentialValidationResult(usuario.getEmail(), groups);
             }

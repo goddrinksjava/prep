@@ -22,19 +22,25 @@ const startWS = function startWS() {
 };
 
 function updatePrep(prepDTO) {
-    const content = document.getElementById("content");
-    content.innerHTML = "";
+    const content = document.getElementById("casillas");
+    const children = [];
     prepDTO.casillas
         .map(generateCasilla)
         .forEach(function (divCasilla) {
-            content.appendChild(divCasilla)
+            children.push(divCasilla)
         });
+
+    content.innerHTML = "";
+
+    children.forEach(function (child) {
+        content.appendChild(child)
+    })
 }
 
 function generateCasilla(casilla) {
     const divCasilla = document.createElement("div");
 
-    const pCasillaID = document.createElement("p");
+    const pCasillaID = document.createElement("h2");
     pCasillaID.textContent = "Casilla: " + casilla.id;
     divCasilla.appendChild(pCasillaID);
 
@@ -50,7 +56,7 @@ function generateCasilla(casilla) {
 function generateCandidaturaElement(candidatura) {
     const divCandidatura = document.createElement("div");
 
-    const pNombreCandidatura = document.createElement("p");
+    const pNombreCandidatura = document.createElement("h4");
     pNombreCandidatura.textContent = candidatura.nombre;
     divCandidatura.appendChild(pNombreCandidatura);
 
@@ -67,12 +73,8 @@ function generateCandidato(candidato) {
     const divCandidato = document.createElement("div");
 
     const pPartidos = document.createElement("p");
-    pPartidos.textContent = candidato.partidos.join(", ");
+    pPartidos.textContent = candidato.partidos.join("-");
     divCandidato.appendChild(pPartidos);
-
-    const pNombreCandidato = document.createElement("p");
-    pNombreCandidato.textContent = candidato.nombre;
-    divCandidato.appendChild(pNombreCandidato);
 
     const pVotosCandidato = document.createElement("p");
     pVotosCandidato.textContent = candidato.votos;

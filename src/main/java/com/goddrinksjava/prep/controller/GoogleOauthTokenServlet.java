@@ -1,8 +1,17 @@
 package com.goddrinksjava.prep.controller;
 
 import com.goddrinksjava.prep.AppConfig;
+import com.goddrinksjava.prep.model.bean.database.Oauth;
+import com.goddrinksjava.prep.model.bean.database.Usuario;
+import com.goddrinksjava.prep.model.bean.dto.OauthSignupDTO;
+import com.goddrinksjava.prep.model.dao.OauthDAO;
+import com.goddrinksjava.prep.model.dao.UsuarioDAO;
 
 import javax.inject.Inject;
+import javax.security.enterprise.AuthenticationStatus;
+import javax.security.enterprise.SecurityContext;
+import javax.security.enterprise.credential.Credential;
+import javax.security.enterprise.credential.UsernamePasswordCredential;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -14,16 +23,30 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.*;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Map;
+
+import static javax.security.enterprise.authentication.mechanism.http.AuthenticationParameters.withParams;
 
 @WebServlet(name = "GoogleOauthTokenServlet", value = "/Login/oauth2/google")
 public class GoogleOauthTokenServlet extends HttpServlet {
+    @SuppressWarnings("CdiInjectionPointsInspection")
+    @Inject
+    private SecurityContext securityContext;
+
+    @Inject
+    OauthDAO oauthDAO;
+
+    @Inject
+    UsuarioDAO usuarioDAO;
+
     @Inject
     AppConfig config;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         String localState = (String) request.getSession().getAttribute("CLIENT_LOCAL_STATE");
+        request.getSession().removeAttribute("CLIENT_LOCAL_STATE");
         if (!localState.equals(request.getParameter("state"))) {
             response.sendError(400);
             return;
@@ -54,12 +77,12 @@ public class GoogleOauthTokenServlet extends HttpServlet {
                 .post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 
 
-        Map<String, Object> json = targetResponse.readEntity(new GenericType<Map<String, Object>>() {});
+        Map<String, Object> json = targetResponse.readEntity(new GenericType<Map<String, Object>>() {
+        });
 
         String accessToken = (String) json.get("access_token");
 
         System.out.println("ACCESS TOKEN: " + accessToken);
-
 
 
         client = ClientBuilder.newClient();
@@ -68,9 +91,39 @@ public class GoogleOauthTokenServlet extends HttpServlet {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
                 .get();
 
-        String userInfoJson = userInfoResponse.readEntity(String.class);
+        Map<String, Object> userInfoJson = userInfoResponse.readEntity(new GenericType<Map<String, Object>>() {
+        });
 
-        System.out.println("USER INFO: " + userInfoJson);
+        try {
+            Oauth oauth = oauthDAO.getBySubAndFkOauthApplication((String) userInfoJson.get("id"), 1);
+            if (oauth != null) {
+                Usuario usuario = usuarioDAO.findById(oauth.getFkUsuario());
+                Credential credential = new UsernamePasswordCredential(usuario.getEmail(), usuario.getPassword());
+                AuthenticationStatus status =
+                        securityContext
+                                .authenticate(
+                                        request,
+                                        response,
+                                        withParams().credential(credential)
+                                );
+                response.sendRedirect("/");
+                return;
+            }
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+            throw new ServletException();
+        }
+
+        request.getSession().setAttribute("oauthSub", userInfoJson.get("id"));
+        request.getSession().setAttribute("oauthApplicationId", 1);
+        request.getSession().setAttribute(
+                "oauthSignupDTO",
+                OauthSignupDTO.builder()
+                        .email((String) userInfoJson.get("email"))
+                        .name((String) userInfoJson.get("name"))
+                        .build()
+        );
+
+        response.sendRedirect("/FinishOauthSignup");
     }
-
 }

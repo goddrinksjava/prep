@@ -1,6 +1,6 @@
 package com.goddrinksjava.prep.model.dao;
 
-import com.goddrinksjava.prep.model.pojo.database.Cargo;
+import com.goddrinksjava.prep.model.bean.database.Cargo;
 
 import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
@@ -21,7 +21,7 @@ public class CargoDAO {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "select NOMBRE from CARGO where ID = ?"
+                        "select nombre from cargo where id = ?"
                 )
         ) {
             stmt.setInt(1, id);
@@ -31,11 +31,11 @@ public class CargoDAO {
         }
     }
 
-    public List<Cargo> getAll() throws SQLException {
+    public List<Cargo> findAll() throws SQLException {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "select * from CARGO"
+                        "select * from cargo"
                 )
         ) {
             return map(stmt.executeQuery());

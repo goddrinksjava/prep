@@ -1,78 +1,79 @@
 package com.goddrinksjava.prep.controller;
 
-import com.goddrinksjava.prep.model.dao.UsuarioDAO;
-import com.goddrinksjava.prep.model.pojo.database.Usuario;
-import com.goddrinksjava.prep.util.Validator;
+import com.goddrinksjava.prep.Mapper;
+import com.goddrinksjava.prep.SignupException;
+import com.goddrinksjava.prep.SignupService;
+import com.goddrinksjava.prep.model.bean.database.Usuario;
+import com.goddrinksjava.prep.model.bean.dto.SignupDTO;
+import org.apache.commons.beanutils.BeanUtils;
 
 import javax.inject.Inject;
+import javax.security.enterprise.AuthenticationStatus;
+import javax.security.enterprise.SecurityContext;
+import javax.security.enterprise.credential.Credential;
+import javax.security.enterprise.credential.UsernamePasswordCredential;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.sql.SQLException;
+import java.lang.reflect.InvocationTargetException;
 
-//TODO set user privileges
-//TODO require email confirmation
+import static javax.security.enterprise.authentication.mechanism.http.AuthenticationParameters.withParams;
+
 @WebServlet(name = "SignupServlet", value = "/Signup")
 public class SignupServlet extends HttpServlet {
+    @SuppressWarnings("CdiInjectionPointsInspection")
     @Inject
-    UsuarioDAO usuarioDAO;
+    private SecurityContext securityContext;
+
+    @Inject
+    Mapper mapper;
+
+    @Inject
+    SignupService signupService;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         request.getRequestDispatcher("signup.jsp").forward(request, response);
     }
 
-
-    //TODO Validate user data
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String nombre = request.getParameter("nombre");
-        String calle = request.getParameter("calle");
-        String colonia = request.getParameter("colonia");
-        String numero_casa = request.getParameter("numero_casa");
-        String municipio = request.getParameter("municipio");
-        String codigo_postal = request.getParameter("codigo_postal");
-        String telefono = request.getParameter("telefono");
-        String email = request.getParameter("email");
-        String password = request.getParameter("password");
+        SignupDTO signupDTO = mapper.getDTO(SignupDTO.class, request);
 
-        boolean anynull =
-                Validator.anyNull(
-                        nombre,
-                        calle,
-                        colonia,
-                        numero_casa,
-                        municipio,
-                        codigo_postal,
-                        telefono,
-                        email,
-                        password
-                );
-
-        if (anynull) {
-            throw new ServletException();
+        if (signupDTO == null) {
+            response.sendError(400);
+            return;
         }
 
-        Usuario usuario = Usuario.builder()
-                .nombre(nombre)
-                .calle(calle)
-                .colonia(colonia)
-                .numeroCasa(numero_casa)
-                .municipio(municipio)
-                .codigoPostal(codigo_postal)
-                .telefono(telefono)
-                .email(email)
-                .password(password)
-                .build();
+        Usuario usuario = new Usuario();
+        try {
+            BeanUtils.copyProperties(usuario, signupDTO);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
+            throw new ServletException();
+        }
 
         try {
-            usuarioDAO.persist(usuario);
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
-            throw new ServletException();
+            signupService.signup(request, response, usuario);
+        } catch (SignupException e) {
+            request.setAttribute("error", "Email ya ha sido registrado");
+            request.getRequestDispatcher("signup.jsp").forward(request, response);
         }
+
+        Credential credential = new UsernamePasswordCredential(usuario.getEmail(), usuario.getPassword());
+
+        AuthenticationStatus status =
+                securityContext
+                        .authenticate(
+                                request,
+                                response,
+                                withParams().credential(credential)
+                        );
+
+        request.getRequestDispatcher("/ConfirmarEmail").forward(request, response);
+
     }
 }

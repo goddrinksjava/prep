@@ -1,6 +1,6 @@
 package com.goddrinksjava.prep.model.dao;
 
-import com.goddrinksjava.prep.model.pojo.database.Privilegio;
+import com.goddrinksjava.prep.model.bean.database.Privilegio;
 
 import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
@@ -17,19 +17,31 @@ public class PrivilegioDAO {
     @Resource(lookup = "java:global/jdbc/prep")
     private DataSource dataSource;
 
-    public Privilegio findById(Long id) throws SQLException {
+    public String findNameById(Integer id) throws SQLException {
         try (
                 Connection conn = dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("select * from PRIVILEGIO where ID = ?")
+                PreparedStatement stmt = conn.prepareStatement("select nombre from privilegio where id = ?")
         ) {
-            stmt.setLong(1, id);
+            stmt.setInt(1, id);
 
-            try {
-                return mapResultSet(stmt.executeQuery()).get(0);
-            } catch (IndexOutOfBoundsException e) {
-                return null;
-            }
+            ResultSet resultSet = stmt.executeQuery();
 
+            resultSet.next();
+            return resultSet.getString(1);
+        }
+    }
+
+    public Integer findIdByName(String name) throws SQLException {
+        try (
+                Connection conn = dataSource.getConnection();
+                PreparedStatement stmt = conn.prepareStatement("select id from privilegio where nombre = ?")
+        ) {
+            stmt.setString(1, name);
+
+            ResultSet resultSet = stmt.executeQuery();
+
+            resultSet.next();
+            return resultSet.getInt(1);
         }
     }
 

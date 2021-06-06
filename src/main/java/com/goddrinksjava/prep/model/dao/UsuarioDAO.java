@@ -1,7 +1,6 @@
 package com.goddrinksjava.prep.model.dao;
 
-import com.goddrinksjava.prep.model.pojo.database.Privilegio;
-import com.goddrinksjava.prep.model.pojo.database.Usuario;
+import com.goddrinksjava.prep.model.bean.database.Usuario;
 
 import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
@@ -21,7 +20,7 @@ public class UsuarioDAO {
     public Usuario findByEmail(String email) throws SQLException {
         try (
                 Connection conn = dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("select * from USUARIO where EMAIL = ?")
+                PreparedStatement stmt = conn.prepareStatement("select * from usuario where email = ?")
         ) {
             stmt.setString(1, email);
 
@@ -37,14 +36,20 @@ public class UsuarioDAO {
     public Usuario findById(Integer id) throws SQLException {
         try (
                 Connection conn = dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("select * from USUARIO where ID = ?")
+                PreparedStatement stmt = conn.prepareStatement("select * from usuario where id = ?")
         ) {
             stmt.setInt(1, id);
-            return mapResultSet(stmt.executeQuery()).get(0);
+
+            try {
+                return mapResultSet(stmt.executeQuery()).get(0);
+            } catch (IndexOutOfBoundsException e) {
+                return null;
+            }
+
         }
     }
 
-    public List<Privilegio> getPrivileges(Integer id) throws SQLException {
+    public List<String> getPrivileges(Integer id) throws SQLException {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement("select FK_PRIVILEGIO from USUARIO_PRIVILEGIOS where FK_USUARIO = ?")
@@ -52,11 +57,11 @@ public class UsuarioDAO {
             stmt.setInt(1, id);
             ResultSet resultSet = stmt.executeQuery();
 
-            List<Privilegio> privilegios = new ArrayList<>();
+            List<String> privilegios = new ArrayList<>();
             while (resultSet.next()) {
                 privilegios.add(
-                        privilegioDAO.findById(
-                                resultSet.getLong(1)
+                        privilegioDAO.findNameById(
+                                resultSet.getInt(1)
                         )
                 );
             }
@@ -65,12 +70,12 @@ public class UsuarioDAO {
         }
     }
 
-    public void persist(Usuario usuario) throws SQLException {
+    public void insert(Usuario usuario) throws SQLException {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "insert into USUARIO (NOMBRE, CALLE, COLONIA, NUMERO_CASA, MUNICIPIO, CODIGO_POSTAL, TELEFONO, EMAIL, PASSWORD, ENABLED)" +
-                                "values ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )",
+                        "insert into usuario (nombre, calle, colonia, numero_casa, municipio, codigo_postal, telefono, email, password)" +
+                                "values ( ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         Statement.RETURN_GENERATED_KEYS
                 )
         ) {
@@ -83,7 +88,6 @@ public class UsuarioDAO {
             stmt.setString(7, usuario.getTelefono());
             stmt.setString(8, usuario.getEmail());
             stmt.setString(9, usuario.getPassword());
-            stmt.setBoolean(10, false);
             stmt.executeUpdate();
 
             ResultSet generatedKeys = stmt.getGeneratedKeys();
@@ -92,7 +96,6 @@ public class UsuarioDAO {
                 usuario.setEnabled(false);
                 usuario.setId(id);
             } else {
-                //TODO
                 throw new SQLException();
             }
         }
@@ -102,8 +105,9 @@ public class UsuarioDAO {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "update USUARIO set NOMBRE=?, CALLE=?, COLONIA=?, NUMERO_CASA=?, MUNICIPIO=?, CODIGO_POSTAL=?, TELEFONO=?, EMAIL=?, PASSWORD=?, ENABLED=?" +
-                                "where ID=?"
+                        "update usuario set nombre=?, calle=?, colonia=?, numero_casa=?, " +
+                                "municipio=?, codigo_postal=?, telefono=?, email=?, password=?, " +
+                                "email_confirmed=?, enabled=?, fk_casilla=? where id=?"
                 )
         ) {
             stmt.setString(1, usuario.getNombre());
@@ -115,8 +119,16 @@ public class UsuarioDAO {
             stmt.setString(7, usuario.getTelefono());
             stmt.setString(8, usuario.getEmail());
             stmt.setString(9, usuario.getPassword());
-            stmt.setBoolean(10, usuario.getEnabled());
-            stmt.setInt(11, usuario.getId());
+            stmt.setBoolean(10, usuario.getEmailConfirmed());
+            stmt.setBoolean(11, usuario.getEnabled());
+
+            if (usuario.getFkCasilla() != null) {
+                stmt.setInt(12, usuario.getFkCasilla());
+            } else {
+                stmt.setNull(12, java.sql.Types.INTEGER);
+            }
+
+            stmt.setInt(13, usuario.getId());
             stmt.executeUpdate();
         }
     }
@@ -136,21 +148,28 @@ public class UsuarioDAO {
                     .telefono(resultSet.getString("telefono"))
                     .email(resultSet.getString("email"))
                     .password(resultSet.getString("password"))
+                    .emailConfirmed(resultSet.getBoolean("email_confirmed"))
                     .enabled(resultSet.getBoolean("enabled"))
+                    .fkCasilla(resultSet.getInt("fk_casilla"))
                     .build();
 
+            resultSet.getInt("fk_casilla");
+            if (resultSet.wasNull()) {
+                usuario.setFkCasilla(null);
+            }
             usuarios.add(usuario);
         }
 
         return usuarios;
     }
 
-    public List<Usuario> findByEnabled(boolean enabled) throws SQLException {
+    public List<Usuario> findByEnabledAndEmailConfirmed(boolean enabled, boolean emailConfirmed) throws SQLException {
         try (
                 Connection conn = dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement("select * from USUARIO where ENABLED = ?")
+                PreparedStatement stmt = conn.prepareStatement("select * from USUARIO where ENABLED = ? and email_confirmed=?")
         ) {
             stmt.setBoolean(1, enabled);
+            stmt.setBoolean(2, emailConfirmed);
 
             return mapResultSet(stmt.executeQuery());
         }

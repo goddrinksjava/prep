@@ -1,6 +1,6 @@
 package com.goddrinksjava.prep.model.dao;
 
-import com.goddrinksjava.prep.model.pojo.database.Candidato;
+import com.goddrinksjava.prep.model.bean.database.Candidato;
 
 import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
@@ -24,25 +24,11 @@ public class CandidatoDAO {
     @Inject
     private PartidoDAO partidoDAO;
 
-    public String getNombreById(Integer id) throws SQLException {
-        try (
-                Connection conn = dataSource.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(
-                        "select NOMBRE from CANDIDATO where ID = ?"
-                )
-        ) {
-            stmt.setInt(1, id);
-            ResultSet resultSet = stmt.executeQuery();
-            resultSet.next();
-            return resultSet.getString(1);
-        }
-    }
-
     public String getCargoById(Integer id) throws SQLException {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "select FK_CARGO from CANDIDATO where ID = ?"
+                        "select fk_cargo from candidato where id = ?"
                 )
         ) {
             stmt.setInt(1, id);
@@ -56,7 +42,7 @@ public class CandidatoDAO {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "select FK_PARTIDO from CANDIDATO_PARTIDO where FK_CANDIDATO = ?"
+                        "select fk_partido from candidato_partido where fk_candidato = ?"
                 )
         ) {
             stmt.setInt(1, id);
@@ -76,11 +62,22 @@ public class CandidatoDAO {
         try (
                 Connection conn = dataSource.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(
-                        "select * from CANDIDATO where FK_CARGO = ?"
+                        "select * from candidato where fk_cargo = ?"
                 )
         ) {
             stmt.setInt(1, id);
 
+            return map(stmt.executeQuery());
+        }
+    }
+
+    public List<Candidato> findAll() throws SQLException {
+        try (
+                Connection conn = dataSource.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(
+                        "select * from candidato"
+                )
+        ) {
             return map(stmt.executeQuery());
         }
     }
@@ -92,7 +89,6 @@ public class CandidatoDAO {
             candidatoList.add(
                     Candidato.builder()
                             .id(resultSet.getInt("id"))
-                            .nombre(resultSet.getString("nombre"))
                             .fkCargo(resultSet.getInt("fk_cargo"))
                             .build()
             );

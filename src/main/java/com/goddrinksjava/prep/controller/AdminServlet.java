@@ -1,7 +1,7 @@
 package com.goddrinksjava.prep.controller;
 
 import com.goddrinksjava.prep.model.dao.UsuarioDAO;
-import com.goddrinksjava.prep.model.pojo.database.Usuario;
+import com.goddrinksjava.prep.model.bean.database.Usuario;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
@@ -17,8 +17,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.goddrinksjava.prep.util.Validator.allEqual;
-
 @ServletSecurity(
         value = @HttpConstraint(rolesAllowed = {"administrador"})
 )
@@ -31,7 +29,7 @@ public class AdminServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         List<Usuario> usuarioList;
         try {
-            usuarioList = usuarioDAO.findByEnabled(false);
+            usuarioList = usuarioDAO.findByEnabledAndEmailConfirmed(false, true);
         } catch (SQLException throwables) {
             throwables.printStackTrace();
             throw new ServletException();
@@ -68,11 +66,6 @@ public class AdminServlet extends HttpServlet {
             ids = Arrays.stream(idsStringValue).map(Integer::parseInt).collect(Collectors.toList());
         } catch (NumberFormatException e) {
             e.printStackTrace();
-            response.sendError(400);
-            return;
-        }
-
-        if (!allEqual(ids.size(), statusList.length)) {
             response.sendError(400);
             return;
         }
